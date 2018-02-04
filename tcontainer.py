@@ -11,7 +11,7 @@ from enum import Enum
 
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QPoint, pyqtSignal, QRect
-from PyQt5.QtGui import QColor, QCursor
+from PyQt5.QtGui import QColor, QCursor, QPainterPath, QBrush
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QMenu, QLabel, QMainWindow
 
 
@@ -41,7 +41,6 @@ class TContainer(QWidget):
         super().__init__(parent=parent)
 
         self.menu = QMenu(parent=self, title='menu')
-        self.childWidget = cWidget
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
         self.setVisible(True)
         self.setAutoFillBackground(False)
@@ -51,13 +50,7 @@ class TContainer(QWidget):
         self.move(p)
 
         self.vLayout = QVBoxLayout(self)
-        if cWidget:
-            cWidget.setParent(self)
-            cWidget.releaseMouse()
-            cWidget.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
-            self.vLayout.addWidget(cWidget)
-            self.vLayout.setContentsMargins(0,0,0,0)
-        self.setLayout(self.vLayout)
+        self.setChildWidget(cWidget)
 
         self.m_infocus = True
         self.m_showMenu = False
@@ -69,6 +62,7 @@ class TContainer(QWidget):
             self.childWidget = cWidget
             self.childWidget.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
             self.childWidget.setParent(self)
+            self.childWidget.releaseMouse()
             self.vLayout.addWidget(cWidget)
             self.vLayout.setContentsMargins(0,0,0,0)
 
@@ -96,27 +90,17 @@ class TContainer(QWidget):
         self.outFocus.emit(False)
         self.m_infocus = False
 
+    def paintEvent(self, e: QtGui.QPaintEvent):
+        painter = QtGui.QPainter(self)
+        color = (r, g, b, a) = (255, 0, 0, 16)
+        painter.fillRect(e.rect(), QColor(r, g, b, a))
 
-    def eventFilter(self, obj: 'QObject', evt: 'QEvent'):
         if self.m_infocus:
-            w = self.parentWidget()
-            if w == obj and (evt.type() == QtCore.QEvent.Paint):
-                # Draw container selection
-                painter = QtGui.QPainter(w)
-                p = self.mapTo(w, QPoint(-3, -3))
-                LT = w.mapFrom(w, p)
-                LB = w.mapFrom(w, QPoint(p.x(), p.y() + self.height()))
-                RB = w.mapFrom(w, QPoint(p.x() + self.width(), p.y() + self.height()))
-                RT = w.mapFrom(w, QPoint(p.x() + self.width(), p.y()))
+            rect = e.rect()
+            rect.adjust(0,0,-1,-1)
+            painter.setPen(QColor(r, g, b))
+            painter.drawRect(rect)
 
-                painter.fillRect(LT.x(), LT.y(), 6, 6, QColor("black"))
-                painter.fillRect(LB.x(), LB.y(), 6, 6, QColor("black"))
-                painter.fillRect(RB.x(), RB.y(), 6, 6, QColor("black"))
-                painter.fillRect(RT.x(), RT.y(), 6, 6, QColor("black"))
-                #return QWidget(obj, evt)
-                return True
-        #return QWidget.eventFilter(self, obj, evt)
-        return False
 
     def mousePressEvent(self, e: QtGui.QMouseEvent):
         self.position = QPoint(e.globalX() - self.geometry().x(), e.globalY() - self.geometry().y())
@@ -286,9 +270,9 @@ class MainWindow(QMainWindow):
 
         self.showMaximized()
         lab1 = QLabel("Label1")
-        #lab2 = QLabel("Label2")
+        lab2 = QLabel("Label2")
         con1 = TContainer(self, QPoint(10,10), lab1)
-        #con2 = TContainer(self, QPoint(20,50), lab2)
+        con2 = TContainer(self, QPoint(20,50), lab2)
 
 
 if __name__ == '__main__':
